@@ -1,0 +1,278 @@
+---
+title: "A Quick Tour of Advanced `SQL` Topics"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    df_print: paged
+    css: ../../../styles.css
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
+```
+
+```{r, eval=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+library(RPostgres)
+
+db = dbConnect(
+  Postgres(), 
+  host = 'db-postgresql-lon1-20135-do-user-7581050-0.b.db.ondigitalocean.com',
+  port = 25061,
+  dbname = 'omni_pool',
+  user = 'omni_user',
+  password = 'niytna5mcwsz124i',
+  sslmode = 'require',
+  bigint = 'numeric'
+)
+```
+
+# Learning objectives
+
+* Creating your own functions for frequently performed operations
+* Investigate query performance via `EXPLAIN ANALYZE` and `INDEX`ing a column
+* Common table expressions
+* Window functions
+
+**Duration - 45 minutes**
+
+# Introduction
+
+In this brief overview we aim to give you something of a 'whistle-stop tour' of more advanced `SQL` topics. The intention here is to show you the `SQL` syntax, rather than coding through it, as this is definitely extension material. Nevertheless, we hope you'll find it useful to see some of this more advanced functionality, and that it will encourage you to keep learning and practicing `SQL`!  
+
+# Creating your own functions
+
+Imagine that you often have to calculate the **percentage change** between two values in the `SQL` queries you write. 
+  
+$$\text{percentage change} = 100 \times \frac{\text{new val} - \text{old val}}{\text{old val}}$$
+  
+It will be a pain to have to repeatedly type code like
+  
+```{sql, eval=FALSE}
+SELECT
+...
+	100 * (new_val - old_val) / old_val AS percent_change_in_val
+...
+```
+
+wherever required in your queries. Wouldn't it be nice to be able to create **your own `percent_change(new_val, old_val)` function** and then use it whenever you need to? Well, the good news is that you can! Let's see how:  
+
+```{sql, eval=FALSE}
+CREATE OR REPLACE FUNCTION 
+percent_change(new_value NUMERIC, old_value NUMERIC, decimals INT DEFAULT 2)
+RETURNS NUMERIC AS 
+	'SELECT ROUND(100 * (new_value - old_value) / old_value, decimals);'
+LANGUAGE SQL
+IMMUTABLE
+RETURNS NULL ON NULL INPUT;
+```
+
+There is a lot is going on in the code above, but let's break it down line-by-line:
+
+* `CREATE OR REPLACE FUNCTION` is fairly self-explanatory. We also tell `PostgreSQL` the name of the function: `percent_change` and the input values to expect: `new_value` (which will be `NUMERIC`), `old_value` (also `NUMERIC`) and `decimals` (an `INT`eger).
+* We give a `DEFAULT` of 2 for `decimals`: so, if someone using `percent_change()` doesn't explicitly state the number of decimal places they want, the function will return two decimal places by default.
+* We also have to say that the function `RETURN`s a `NUMERIC` value (and state on the last line how to deal with `NULL`s: return `NULL` if any input is `NULL`).
+* Next there follows the maths to calculate the percentage change, wrapped in a call to `ROUND()` to chop it down to the requested number of `decimals`.
+* We tell `PostgreSQL` that we've written the function in `SQL`. In fact, in `PostgreSQL` you have a number of choices of language (including `Python`)!
+* Last, we say that the function is `IMMUTABLE`: this simply means that it **doesn't change** any data in any table it runs on. This helps the `PostgreSQL` engine figure out how to efficiently make use of the function in queries.
+
+Now we can use the function wherever we like, with code similar to:
+
+```{sql, eval=FALSE}
+SELECT
+...
+	percent_change(new_val, old_val, optional_decimals) AS percent_change_in_val
+...
+```
+
+In fact we've created the function already in the `omni_pool` database. You can see it in `DBeaver` by looking at the `Functions` folder under the `public` schema. Let's see it in action: first using the default value of 2 for decimals, and then specifying 4 decimal places:
+
+```{sql, connection = db, output.var="out"}
+SELECT
+	percent_change(107, 98) AS default_decimals,
+	percent_change(50, 65, 4) AS four_decimals;
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+Beware of creating this function yourselves on `omni_pool` however! Functions are 'owned' by a particular database user, and behind the scenes we are all connected to `omni_pool` **as a single user**: `omni_user`. So we would all end up overwriting each other's functions! Chaos! Creating your own function might have to wait until you have your own distinct `username` on a future database.
+
+# Investigating query performance via `EXPLAIN ANALYZE` and `INDEX`ing a column
+
+Slow running `SQL` queries are a very common annoyance. Often this is due to poor database design, badly phrased queries, or a combination of both factors. At some point you may be asked to investigate **why** a particular query is running so slowly, and then perhaps to **take action** to improve execution times. The `EXPLAIN ANALYZE` command can help you with this: it profiles the performance of `SQL` queries!
+
+Let's see it in action for the following query: get the average `salary` by `department` for `employees` in Germany, France, Italy and Spain:
+
+```{sql, connection = db, output.var="out"}
+EXPLAIN ANALYZE
+SELECT
+  department,
+	AVG(salary) AS avg_salary
+FROM employees 
+WHERE country IN ('Germany', 'France', 'Italy', 'Spain')
+GROUP BY department
+ORDER BY AVG(salary);
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+First, note that `EXPLAIN ANALYZE` doesn't return the data requested by the query, it instead returns **how** the query was performed (i.e. which operations were executed and in which order), and **how long** each operation took (`actual_time`, typically given in milliseconds, showing the start and end points).  
+
+What should we look for in this output? Well, the total `Execution Time` is printed at the bottom, and you want to see **which operations** take up most of that total time. So looking at the `actual time` entries for each operation: we can see that the majority of time in this query was spent on the `Seq Scan` operation: this corresponds to the `WHERE country IN ('Germany', 'France', 'Italy', 'Spain')` filtering clause. So, even though this query ran very fast, likely fast enough for our purposes, if we needed to further improve performance we would look first at this filtering step!
+
+What can we do to speed up queries? One of the most common solutions, and likely your first choice should be to `INDEX` column(s) that you often use in `WHERE` or `GROUP BY` clauses, or in `JOIN`s. But what is an `INDEX`? Well, an `INDEX` **orders** a column behind the scenes and provides a quick way to find rows using that column. 
+
+This is rather like the difference between looking up a person (say 'Alicia Pennent') in a directory by either:
+
+* starting at the start and going through each page in turn until you find them (`Seq Scan` - the sequential scan mentioned above):  all A's, then B's, all the way to P's, where you find Alicia Pennent. 
+* using the alphabetical index to find them (an `Index Scan`): go directly to P's, then Pennent, then Alicia Pennent.
+
+In general, using the index should be a much more efficient way to find the item you're looking for!
+
+We have a 'hidden table' in `omni_pool` called `employees_indexed` (in reality this is something called a `MATERIALIZED VIEW` that we won't go into here) in which we've `INDEX`ed the `country` column using a `SQL` command of the form:
+
+```{sql, eval=FALSE}
+CREATE INDEX employees_indexed_country ON employees_indexed(country ASC NULLS LAST);
+```
+
+**Note: you will need to have the relevant database permissions to be able to add an `INDEX`!**
+
+Now let's run the query again using `employees_indexed` and the `INDEX`ed `country` column:
+
+```{sql, connection = db, output.var="out"}
+EXPLAIN ANALYZE
+SELECT
+  department,
+	AVG(salary) AS avg_salary
+FROM employees_indexed 
+WHERE country IN ('Germany', 'France', 'Italy', 'Spain')
+GROUP BY department
+ORDER BY AVG(salary);
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+Now we see the filtering by `country` has been done using an `Index Scan`. For a table this small (just 1000 rows), the improvement is liable to be small, and random 'noise' in execution times may well offset it, but for larger tables (and annoyingly slow queries), `INDEX`ing might offer very significant improvement in execution times. 
+
+So why not `INDEX` all the columns in each table? Unfortunately, each additional `INDEX` increases the storage space of your table, and **slows down** the other CRUD operations (`INSERT`, `UPDATE` and `DELETE`), as each `INDEX` has to be updated each time a row is added, changed or removed. So, as always in life, it's a case of finding a happy medium! 
+
+# Common table expressions (CTEs)
+
+We saw yesterday that we can create 'temporary' tables in queries using **subqueries**. However, the resulting queries can be long and difficult to read and understand, and if we need to use a subquery more than once in a query, then we have to repeat the `SQL` code to create it in each place. This is not only ugly, it will also increase execution time, as each occurrence of the subquery is treated separately by `SQL` (and so the same subquery ends up being run multiple times).
+
+**Common table expressions (CTEs)** offer a solution to these problems: rather than writing the code for a subquery **inside** a query in one or more places, we write it **once** at the start of the query, giving it a name. Then we use that name in the following query, treating it as if it were **just another table in the database**!
+
+An example will help to show what we mean. Thankfully, the example is a problem we have already seen in the last task in the grouping and subqueries lession:
+
+<br>
+<center>
+**"Find all the employees in the United States who work the most common full-time equivalent hours across the corporation."**
+</center>
+<br>
+
+Now, recall, we tackled this using subqueries like so:
+
+```{sql, connection = db, output.var="out"}
+SELECT *
+FROM employees
+WHERE country = 'United States' AND fte_hours IN (
+  SELECT fte_hours
+  FROM employees
+  GROUP BY fte_hours
+  HAVING COUNT(*) = (
+    SELECT MAX(count)
+    FROM (
+      SELECT COUNT(*) AS count
+      FROM employees
+      GROUP BY fte_hours
+    ) AS temp
+  )
+)
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+This works, but we think you'll agree that it's really horrible to read, and it's actually somewhat inefficient, as you can see we `GROUP BY fte_hours` twice! Let's see how we could tidy this up using CTEs!
+
+* Think about what each subquery does. In this case, there is one repeating 'theme' in the subqueries: calculate the number of employees working each `fte_hours` pattern.
+* So we can write a 'central' subquery that **provides** just this table of counts, and then two other subqueries that **use** the counts. Rather than subqueries, however, we will code these as **CTEs**: temporary tables defined at the start of a query that exist only while the query is running.
+* We create CTEs using `WITH` and `AS` commands, and for this reason, queries that use CTEs are often called '`WITH` queries'. 
+* Finally we write the subsequent query making use of any or all of the CTEs we've defined.
+
+```{sql, connection = db, output.var="out"}
+WITH fte_count AS (
+	SELECT
+		fte_hours,
+		COUNT(*) AS count
+	FROM employees
+	GROUP BY fte_hours
+),
+max_fte_count AS (
+	SELECT 
+		MAX(count) AS max_count
+	FROM fte_count
+),
+most_common_fte AS (
+	SELECT
+		fte_hours
+	FROM fte_count 
+	WHERE count = (
+		SELECT 
+		  max_count 
+		FROM max_fte_count
+	)
+)
+SELECT *
+FROM employees
+WHERE country = 'United States' AND fte_hours IN (
+	SELECT
+		fte_hours 
+	FROM most_common_fte
+)
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+Hopefully you agree that the CTE leads to more readable code (in particular, splitting up the earlier complex syntax into 'named chunks' helps you to understand what each part is doing). Note as well how we are able to use a previously defined CTE in any later defined CTE. Rewriting our earlier query in this way is also **more efficient**, as now `GROUP BY fte_hours` occurs just once (you could run `EXPLAIN ANALYZE` a few times on both queries to check this).
+
+We provide further details on CTEs in the optional lesson included in the notes today.
+
+# Window functions
+
+Window functions are another recent addition to `ANSI SQL`. Basically, they let you use the power of `GROUP BY` operations (and more besides) **while retaining access** to the details of individual rows! Remember that this was the limitation of `GROUP BY`: after grouping, you were only allowed to `SELECT` columns that appeared in the `GROUP BY` clause, and all other columns had to appear in some sort of aggregate function. So, wow for window functions: talk about having your cake and eating it!
+
+The 'window' part of the window function is defined in the `SELECT` clause using syntax like `aggregate_function OVER (window_definition)`. For that reason, queries using window functions are often called '`OVER` queries'. Let's see an example that solves the following problem:
+
+<br>
+<center>
+**"Show for each employee their salary together with the minimum and maximum salaries of employees in their department."**
+</center>
+<br>
+
+Note how this involves details of individual rows ('...for each employee their salary...') together with some sort of aggregate(s) applied over groups ('minimum... maximum salaries... in their departments'). This combination makes this a perfect candidate in which to apply window functions! 
+
+```{sql, connection = db, output.var="out"}
+SELECT
+  first_name,
+  last_name,
+  department,
+  salary,
+  MIN(salary) OVER (PARTITION BY department) as min_sal_dept,
+  MAX(salary) OVER (PARTITION BY department) as max_sal_dept
+FROM employees
+ORDER BY id
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+The two main window definitions are `PARTITION BY...` and `ORDER BY...` (and you can also combine them). The logic of how window functions work and the associated syntax are slightly more complex than what we've seen up to this point in `SQL`, but it is well worth learning for the power and expressiveness you'll gain! 
+
+You can find more on window functions in the optional lesson included in the notes today.

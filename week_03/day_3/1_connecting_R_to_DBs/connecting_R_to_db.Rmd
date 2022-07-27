@@ -1,0 +1,264 @@
+---
+title: "Connecting `R` to a database"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    df_print: paged
+    css: ../../../styles.css
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
+```
+
+# Learning Objectives<br>
+
+* How to secure database access credentials using a separate `source` file
+* How to connect to a remote database in `R`
+
+**Duration - 60 minutes**<br>
+
+The main focus in data analysis is on **getting data into an analysis environment**, in our case `R`. In this lesson, we'll see how to connect `R` to a remote `PostgreSQL` database hosted on a server.
+
+You will also see how to *keep your access credentials for a database secure*. This is a key requirement, particularly if you intend to share your `R` code with others! You don't want to post usernames and passwords to GitHub :-)
+
+<hr>
+
+# Storing database access credentials securely 
+<br>
+
+We don't want to explicitly put our username and password for a database into a data analysis `R` file because it's not secure and hampers sharing the code with other (partly because it may not work for them as they may have their own credentials). Even worse, we really don't want to accidentally push our credentials to GitHub, potentially for the whole world to see and use. Beware!
+
+Fortunately there is quite an easy fix for this:
+
+* We can save our username and password as string variables in a separate `R` file and `source()` that file in to your code when you need it. 
+* If you keep that file **outside** of any of your `Git` repos, there will be no danger of it being pushed up to GitHub. 
+
+This is not a completely secure solution as someone could access that file and find the username and password there in plain text, but it's a reasonable compromise. 
+
+So let's setup a `omni_credentials.R` file in your home directory. You can do this either via `Atom` on in a `.R` file. 
+
+Now let's save our `Username` and `Password` for the remote `omni_pool` database into this file.
+
+**Instructor**: details in plain text for Slack / Zoom chat  
+
+> **Host**: db-postgresql-lon1-20135-do-user-7581050-0.b.db.ondigitalocean.com  
+> **Port:** 25061  
+> **Database:** omni_pool  
+> **Username:** omni_user  
+> **Password:** niytna5mcwsz124i  
+
+| Connection setting | Value |
+|---|---|
+| Host | db-postgresql-lon1-20135-do-user-7581050-0.b.db.ondigitalocean.com |
+| Port | 25061 |
+| Database | omni_pool |
+| Username | omni_user |
+| Password | niytna5mcwsz124i |
+
+In `Atom` or `R`, add the following to file `omni_credentials.R`
+
+```{r, eval = FALSE}
+omni_username <- "omni_user"
+omni_password <- "niytna5mcwsz124i" 
+```
+
+Save your file into your home directory of your computer, and close it. *(Note: for Windows users who may not have permission to save into your home directory directly via Atom or R  then you can save the file in another folder and then via `File Explorer` copy and paste the file into the home directory)*. 
+
+Saving it into your home directory avoids relative file path issues we discussed in week 1 and 2 which are specific to people's computers. You could save it within a project and add the file name to the `.gitignore` but this means adding particular credentials files repeatedly into multiple projects, so to avoid this we suggest having a single copy of all your credentials held in your home directory. 
+
+Now, in any file you want to use your `Username` and `Password` for the `omni_pool` database, you just `source()` in the `omni_credentials.R` file.
+
+For Mac:
+```{r, eval = FALSE}
+source("~/omni_credentials.R") 
+```
+
+For Windows:
+```{r, eval = FALSE}
+source("C:/omni_credentials.R") 
+```
+
+This will make the `omni_username` and `omni_password` string variables available to use in your project code, but **the credentials never appear in your project `R` code in plain text!** Instead, just the variable names appear and not the data they contain.
+
+<br>
+<div class='emphasis'>
+Again, you **must** keep access credentials secure. Companies can fail security audits if employees don't take reasonable precautions to safeguard credentials! But don't worry, it's pretty easy.
+</div>
+<br>
+
+# Connecting `R` to a database
+
+## Connecting
+
+Now our credentials are stored in a separate credentials file, we are ready to connect `R` to the `omni_pool`. We're going to make use of the 
+
+```{r}
+library(RPostgres)
+# source credentials file
+# this makes variables omni_username and omni_password available to use
+source("~/omni_credentials.R")
+
+# create connection object using omni_username and omni_password
+db_connection = dbConnect(
+  drv = Postgres(), 
+  host = "db-postgresql-lon1-20135-do-user-7581050-0.b.db.ondigitalocean.com",
+  port = 25061,
+  dbname = "omni_pool",
+  user = omni_username,
+  password = omni_password,
+  bigint = "numeric"
+)
+
+# now we have our connection, don't need credentials anymore
+# remove them from global environment
+rm(omni_username, omni_password)
+```
+
+<blockquote class = 'task'>
+**Task - 3 mins** Take a few minutes to look at the documentation for the `dbConnect()` function we are using here, identify the arguments we pass in above.
+```{r, eval=FALSE, echo=TRUE}
+# in R console in RStudio
+?RPostgres::`dbConnect,PqDriver-method`
+```
+</blockquote>
+
+Most of the arguments are reasonably clear. The one that requires a little explanation is what we pass in as the `drv` argument. The `Postgres()` function returns a **driver object** that allows us to connect to a PostgreSQL database: this is what we pass in as `drv`.
+
+
+## Reading
+
+Now we have our connection, let's use it to list the tables in the `omni_employees` database
+
+```{r}
+# list the tables, passing in the connection object
+dbListTables(conn = db_connection)
+```
+
+Next, let's see the fields (i.e. columns) in the `employees` table
+
+```{r}
+# note recurring pattern, always pass in the connection object along with any other required arguments
+dbListFields(conn = db_connection, name = "employees")
+```
+
+Finally, let's get the records in the table!
+
+```{r}
+# the pattern again! Takes in connection object and a string containing SQL command
+data <- dbGetQuery(conn = db_connection, statement = "SELECT * FROM employees")
+
+# what class does this return?
+class(data)
+
+# contents and size
+head(data)
+nrow(data)
+```
+
+<br>
+<details>
+<summary>**Fetching records in 'chunks' - useful for big data**</summary>
+`dbGetQuery()` does three things one after another: 
+
+1. It sends the query
+2. It retrieves the results 
+3. It 'clears the result set' 
+
+The last phrase is a bit mysterious. What is a result set? To see what this means, let's use another query function which **does not clear the result set**.
+
+```{r}
+# this time use the dbSendQuery() function
+result_set <- dbSendQuery(conn = db_connection, statement = "SELECT * FROM employees")
+
+# what class does this return?
+class(result_set)
+
+first_10 <- dbFetch(res = result_set, n = 10)
+first_10
+
+next_10 <- dbFetch(res = result_set, n = 10)
+next_10
+
+# to get all remaining records in results_set, set n to -1
+all_remaining <- dbFetch(res = result_set, n = -1)
+# expect 980 records: 1000 minus the 20 we have fetched already
+nrow(all_remaining)
+
+# once we have all the results we want, clear the result_set
+dbClearResult(res = result_set)
+```
+</details>
+<br>
+
+## Using native `SQL` code chunks in `R` notebooks
+
+`R` notebooks offer a great feature that you can use `SQL` code chunks natively within them. You need to have an active connection to a database for this to work (i.e. you will need to have run the connection code we used earlier). The syntax is as follows:
+
+````markdown
+`r ''````{sql, connection = db_connection}
+SELECT *
+FROM employees
+LIMIT 10
+```
+````
+
+```{sql, connection = db_connection, output.var = "out"}
+SELECT *
+FROM employees
+LIMIT 10
+```
+
+```{r, echo=FALSE}
+out
+```
+
+Often you will want to save the output from a `SQL` code chunk to a variable. You can do this with the following code chunk setup:
+
+````markdown
+`r ''````{sql, connection = db_connection, output.var = "out"}
+SELECT *
+FROM employees
+LIMIT 10
+```
+````
+
+You can then work with your output variable as normal in later `R` chunks:
+
+```{sql, connection = db_connection, output.var = "out"}
+--output from this SQL chunk sent to 'out' variable
+SELECT *
+FROM employees
+LIMIT 10
+```
+
+```{r, message=FALSE}
+library(tidyverse)
+```
+```{r}
+out %>%
+  summarise(avg_salary = mean(salary))
+```
+
+## Disconnecting
+
+Finally, it is good practice to close the database connection, once we are finished with it.
+
+```{r}
+dbDisconnect(conn = db_connection)
+```
+
+
+# Additional resources
+
+* [SQL queries with R](https://rpubs.com/nwstephens/sql-queries-with-r) - going forward, there are various ways to query a database from within `R`. 
+
+
+
+
+
+

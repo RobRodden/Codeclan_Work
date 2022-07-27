@@ -1,0 +1,132 @@
+2 + 2
+a <- 10 * 6
+a # assigned object a
+
+# Part A ----
+is_day = FALSE
+lights_on = FALSE
+
+Print("daytime?")
+print(is_day)
+
+print("lights on?")
+Print(lights_on)
+
+# Part B ----
+numbers <- c(1:10)
+numbers *2
+
+# lists ----
+
+# subsetting vectors ----
+days <- c("Mon", "Tue", "Wed", "Thur", "Fri")
+days
+days [1]
+days [10]
+days[2:5]
+
+# functions ----
+myvalues <- 1:100
+myvalues <- c(1:100)
+myvalues
+mean(myvalues)
+median(myvalues)
+min(myvalues)
+max(myvalues)
+sum(myvalues)
+sd(myvalues)
+class(myvalues)
+length(myvalues)
+log(myvalues)
+log10(myvalues)
+mysqrt <- sqrt(myvalues)
+mysqrt
+rnorm(100, 5)
+rnorm(n = 100, 5)
+hist(rnorm(n = 100, mean = 5))
+# help function ----
+?rnorm
+# cntl l cleans console 
+
+# data, frames ----
+id <- 1:200
+group <- c(rep("Vehicle", 100), rep("Drug", 100))
+response <- c(rnorm(100, mean = 25, sd = 5), 
+              rnorm(100, mean = 23, sd = 5))
+myData <- data.frame(Patient = id,
+                     Treatment = group,
+                     Response = response)
+head(myData)
+head(myData, 10)
+tail(myData)
+tail(myData, 2)
+dim(myData)
+str(myData)
+group
+summary(myData)
+str(myData)
+as.numeric(c("1","2","3"))
+as.character(1:100)
+
+# subsetting data.frames
+myData[1, 2]
+myData[2, 3]
+myData[1:20, 2:3]
+myData[40:60, 2:3]
+myData[80:120, 2:3]
+myData[80:120, ]
+myData[, 1]
+myData[, "Response"]
+myData$Response
+myData[myData$Response > 26,]
+myData$Positive <- myData$Response < 26
+myData[myData$Treatment == "vehicle" & myData$Response <= 23,]
+myData[myData$Treatment == "vehicle" | myData$Response <= 23,]
+myData[myData$Treatment != "vehicle" | myData$Response <= 23,]
+age <- rnorm(200, 40, 20)
+age <- round(rnorm(200, 40, 20))
+myData$age <- age
+head(myData)
+
+# reading data into r ----
+pokemon <- read.csv("Pokemon.csv")
+getwd()
+pokemon
+str(pokemon)
+library()
+pokemon <- read.xlsx("Pokemon.xlsx", sheetIndex =1)
+5 == 5.0
+my_mean <- function(vector) {
+  work_out_the_average <- sum(vector)
+  work_out_the_mean <- work_out_the_average / length(vector)
+  return(work_out_the_mean)
+}
+
+calc_shrub_vol <- function(length, width, height) {
+  area <- length * width
+  volume <- area * height
+  return(volume)
+}
+if(length(heights_island1) %% 2 == 0) {
+  print("EVEN!")
+} else {
+  print("ODD!")
+}
+if((length(heights_island1)-1) %% 2 == 0) {
+  print("EVEN!")
+} else {
+  print("ODD!")
+}
+my_median <- function(vector) {
+  ordered_heights <- sort(vector, decreasing = FALSE)
+  if(length(ordered_heights) %% 2 == 0){
+    position1 <- length(ordered_heights) / 2
+    position2 <- position1 + 1
+    temp_values <- ordered_heights[c(position1, position2)]
+    median <- mean(temp_values)
+  }else{
+    position <- (length(ordered_heights) +1) /2
+    median <- ordered_heights[position]
+  }
+return(median)
+}

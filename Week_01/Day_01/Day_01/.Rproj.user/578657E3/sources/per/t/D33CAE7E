@@ -1,0 +1,28 @@
+{
+    "id": "D33CAE7E",
+    "path": "~/Documents/Codeclan/Codeclan_Work/Week_01/Day_01/Day_01/Intro_to_R_Studio.Rmd",
+    "project_path": "Intro_to_R_Studio.Rmd",
+    "type": "r_markdown",
+    "hash": "3312671053",
+    "contents": "",
+    "dirty": false,
+    "created": 1657548636881.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "tempName": "Untitled1",
+        "chunk_output_type": "inline",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "30,2",
+        "scrollLine": "22"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1657552193,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1657552193381,
+    "read_only": false,
+    "read_only_alternatives": []
+}

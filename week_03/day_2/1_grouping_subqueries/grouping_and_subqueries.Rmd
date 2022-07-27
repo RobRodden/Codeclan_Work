@@ -1,0 +1,553 @@
+---
+title: "Grouping and Subqueries"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    df_print: paged
+    css: ../../../styles.css
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = 'center')
+```
+
+# Learning Objectives<br>
+
+* Understand `GROUP BY` and `HAVING` for group level aggregation and filtering
+* Understand the concept of a subquery and see examples of use
+
+**Duration - 1 hour**<br>
+
+# Setup (again)...
+
+Re-establish the connection to the `omni_pool` database in `DBeaver`.
+
+```{r, eval=TRUE, include=FALSE, message=FALSE, warning=FALSE}
+library(RPostgres)
+
+db = dbConnect(
+  Postgres(), 
+  host = 'db-postgresql-lon1-20135-do-user-7581050-0.b.db.ondigitalocean.com',
+  port = 25061,
+  dbname = 'omni_pool',
+  user = 'omni_user',
+  password = 'niytna5mcwsz124i',
+  sslmode = 'require',
+  bigint = 'numeric'
+)
+```
+
+# `GROUP BY`
+
+Consider the following problem:
+
+<br>
+<center>
+**"Find the number of employees within each department of the corporation."**
+</center>
+<br>
+
+We could solve this manually, but it would be a real pain. First, we would need to get a list of the departments in the corporation (we saw how to do this earlier using `DISTINCT`), and then write a query using a `COUNT()` aggregate with a `WHERE` clause specifying each department in turn, something like:
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  COUNT(id) AS number_employees 
+FROM employees 
+WHERE department = 'Legal';
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+and so on 11 more times for each department. This is annoying, and not very general `SQL` or maintainable code: we need to know the 12 departments before we start! Thankfully, `SQL` gives us the `GROUP BY` operator to automate the process!
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  department, 
+  COUNT(id) AS num_employees 
+FROM employees 
+GROUP BY department;
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+Yay, this looks more useful! Note what SQL has done here: it first **groups** records by a specified column (`department` in this case), and then applies the aggregate function (`COUNT()`) to **each group**.
+
+Let's see another few examples of grouping in queries:
+
+<br>
+<center>
+**"How many employees are there in each country?"**
+</center>
+<br>
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  country, 
+  COUNT(id) AS num_employees 
+FROM employees 
+GROUP BY country;
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+<br>
+<center>
+**"How many employees in each department work either 0.25 or 0.5 FTE hours?"**
+</center>
+<br>
+
+```{sql, connection = db, output.var="out"}
+--Note the combination of a WHERE clause to filter records and then a GROUP BY. 
+--Could also use IN rather than BETWEEN here
+SELECT 
+  department, 
+  COUNT(id) AS num_fte_quarter_half 
+FROM employees 
+WHERE fte_hours BETWEEN 0.25 AND 0.5 
+GROUP BY department;
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+You'll see here that we are counting the `id` column. You will have seen earlier that we used `COUNT(*)` which counts all rows returned. The difference between the two occurs if there are any `NULL`s in the column you choose for the count.
+
+Let's take a look at the difference using a column which contains some `NULL`s - the `first_name` column:
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  COUNT(first_name) AS count_first_name,
+  COUNT(id) AS count_id,
+  COUNT(*) AS count_star
+FROM employees;
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+
+The difference in counts arises because there are `NULL` entries in the `first_name` column, and `COUNT()` skips `NULL`s. Generally speaking, if you want a count of rows, stick to using `COUNT(*)` or `COUNT()` of a primary key (which cannot be `NULL` by definition), e.g. `COUNT(id)` in this case.
+
+<br>
+<center>
+**"Find the longest time served by any one employee in each department."**
+</center>
+<br>
+
+This is quite a difficult one! We can use the `NOW()` function to return the current date and time, and then calculate the time served by an employee as `NOW()-start_date`. So, the longest time served by any employee is `NOW()-MIN(start_date)`. This is the aggregate function we will apply to the records grouped by department.
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  department, 
+  NOW()-MIN(start_date) AS longest_time
+FROM employees 
+GROUP BY department;
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+This looks broadly like what we're seeking, but notice that the difference `NOW()-MIN(start_date)` gives a confusingly high amount of precision: days, hours, minutes, seconds, etc... Let's get just the days part of this date-time difference. Enter the useful `EXTRACT()` function (you might have used this in the extension questions in yesterday's homework). Let's also see how we could convert this value to years:
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  department, 
+  EXTRACT(DAY FROM NOW()-MIN(start_date)) AS longest_time_days,
+  ROUND(EXTRACT(DAY FROM NOW()-MIN(start_date))/365) AS longest_time_approx_years
+FROM employees 
+GROUP BY department;
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+Here's the general rule for `GROUP BY`. Once you've grouped rows, your `SELECT` statement is allowed to retrieve the column specified in `GROUP BY`, together with the result of a aggregate function applied across rows in the group. Let's see what happens when we break this rule by trying to `SELECT` the `first_name` in an earlier query:
+
+```{sql, connection = db, eval=FALSE}
+SELECT 
+  department, 
+  first_name,
+  COUNT(id) AS num_employees 
+FROM employees 
+GROUP BY department
+```
+
+You'll get an error: `'ERROR: column "employees.first_name" must appear in the GROUP BY clause or be used in an aggregate function'`!
+
+We like to think of this using an analogy:
+
+* Imagine each row's data has been written on an index card, and we have a big stack of cards for all the rows in the table. 
+* A `GROUP BY` operation sorts the cards into separate piles: each pile corresponding to a different value of the `GROUP BY` column (for clarity, we'll assume we `GROUP BY` just one column). 
+* We stick a Post-it(TM) on the top of each pile with the label of that group. We're allowed to `SELECT` that label after `GROUP BY`, and we're also allowed to `SELECT` the result of an aggregate function applied to each pile, as this too results in **a single value** that could be easily written on each Post-it. 
+* We're **not allowed** to `SELECT` any other column, as this would result in a range of values that couldn't easily be written on each Post-it, because each card in the pile might have a **different value** in that column (remember, all the cards in each pile have in common the value of the `GROUP BY` column).
+
+Don't worry if `GROUP BY` takes a while to understand: it's one of the more difficult concepts in `SQL`. People often struggle a bit with it, but you'll feel more comfortable after some practice. Speaking of which...
+
+<br>
+<blockquote class="task">
+**Task - 10 mins** 
+
+Write two queries using `WHERE` and `GROUP BY` to solve the following problems:
+
+<br>
+<center>
+**1. "How many employees in each department are enrolled in the pension scheme?"**
+  
+**2. "Perform a breakdown by country of the number of employees that do not have a stored first name."**
+</center>
+<br>
+
+<details>
+<summary>**Hints**</summary>  
+1. we need to apply a `WHERE` clause on `pension_enrol`.<br>
+2. remember the `IS NULL` operator.
+</details>
+
+<details>
+<summary>**Solution**</summary>
+1.  
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  department, 
+  COUNT(id) as num_employees_pension 
+FROM employees 
+WHERE pension_enrol = TRUE 
+GROUP BY department
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+2.  
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  country, 
+  COUNT(id) as num_employees_no_first 
+FROM employees 
+WHERE first_name IS NULL 
+GROUP BY country
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+</details>
+</blockquote>
+<br>
+
+# `HAVING`
+
+So far we've seen that the `WHERE` clause let's us filter **rows** (or **records**), but what if we wish to filter **groups** by some value of an aggregate function? This is where the `HAVING` operator comes in!
+
+Imagine one of our earlier queries had been even more specific:
+
+<br>
+<center>
+**"Show those departments in which at least 40 employees work either 0.25 or 0.5 FTE hours"**
+</center>
+<br>
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  department, 
+  COUNT(id) as num_fte_quarter_half 
+FROM employees 
+WHERE fte_hours IN (0.25, 0.5) 
+GROUP BY department 
+HAVING COUNT(id) >= 40
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+We've added a `HAVING` clause **after** the `GROUP BY`: notice that it filters using an **aggregate function** applied to a column of the original table.
+
+Let's try one more:
+
+<br>
+<center>
+**"Show any countries in which the minimum salary amongst pension enrolled employees is less than 21,000 dollars."**
+</center>
+<br>
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  country, 
+  MIN(salary) as min_salary 
+FROM employees 
+WHERE pension_enrol = TRUE 
+GROUP BY country 
+HAVING MIN(salary) < 21000
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+Let's break down the two filtering steps:  
+
+* First, **filter the rows** to include only pension enrolled employees: `WHERE pension_enrol = TRUE`
+* Next, group the filtered records by `country`, and then **filter the groups** to include only countries in which the minimum salary is less than $21,000: `HAVING MIN(salary) < 21000`
+
+<br>
+<blockquote class="task">
+**Task - 5 mins** 
+This is about as tough as `SQL` will get for us in this lesson! Write a query using `WHERE`, `GROUP BY` and `HAVING` to solve the following:
+
+<br>
+<center>
+**"Show any departments in which the earliest start date amongst grade 1 employees is prior to 1991"**
+</center>
+<br>
+
+<details>
+<summary>**Hints**</summary>  
+
+* You can use `MIN(date)` to get the **earliest** value of a date column
+* `WHERE` will involve `grade`
+* `GROUP BY` will involve department
+* `HAVING` will involve `MIN()` of a column
+
+</details>
+
+<details>
+<summary>**Solution**</summary>
+
+```{sql, connection = db, output.var="out"}
+SELECT 
+  department, 
+  MIN(start_date) as earliest_start_date_grade_1_pre_91
+FROM employees
+WHERE grade = 1
+GROUP BY department
+HAVING MIN(start_date) < '1991-01-01'
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+</details>
+</blockquote>
+<br>
+
+# Subqueries
+
+Sometimes we would like to use a value **produced by one query inside another query**. We want to do this **programmatically** (i.e. by code) rather than manually (e.g. by running one query, noting the value, then using that value in a second query). This sounds a bit abstract, but it's actually pretty common! As an example, consider this problem:
+
+<br>
+<center>
+**"Find all the employees in Japan who earn over the company-wide average salary."**
+</center>
+<br>
+
+We might think a straightforward way to do this is:
+
+```{sql connection = db, eval = FALSE}
+SELECT *
+FROM employees
+WHERE country = 'Japan' AND salary > AVG(salary)
+```
+
+but we get an `ERROR:  aggregate functions are not allowed in WHERE`! 
+
+In fact, we need to use a **subquery** here. This is just **one query embedded inside another**
+
+```{sql, connection = db, output.var="out"}
+SELECT *
+FROM employees
+WHERE country = 'Japan' AND salary > (SELECT AVG(salary) FROM employees)
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+If it helps, we can think of 'building this query up' in two steps. First, we write what we want to achieve using a place-holder name `average_salary`:  
+
+```{sql, eval=FALSE}
+SELECT *
+FROM employees
+WHERE country = 'Japan' AND salary > average_salary
+```
+
+We know we need to use a subquery to get `average_salary`, as it involves an aggregate function, the `AVG(salary)`. So let's write the subquery as a separate query:  
+
+```{sql, eval=FALSE}
+SELECT AVG(salary)
+FROM employees"
+```
+
+Now wherever we see `average_salary` in the first query, we replace it with the subquery in parentheses
+
+```{sql, connection = db, output.var="out"}
+SELECT *
+FROM employees
+WHERE country = 'Japan' AND salary > (SELECT AVG(salary) FROM employees)
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+<br>
+<blockquote class="task">
+**Task - 5 mins**
+
+Write a query using a subquery to answer the following:
+
+<br>
+<center>
+**"Find all the employees in Legal who earn less than the mean `salary` in that same department."**
+</center>
+<br>
+
+<details>
+<summary>**Solution**</summary>
+```{sql, connection = db, output.var="out"}
+SELECT *
+FROM employees
+WHERE department = 'Legal' AND salary < (
+  SELECT AVG(salary)
+  FROM employees
+  WHERE department = 'Legal'
+)
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+Notice the use of indentation to mark out the subquery as being separate from the outer query: we recommend following this in your own code.
+</details>
+</blockquote>
+<br>
+
+<br>
+<blockquote class="task">
+**Harder Task - 10 mins** 
+
+This is quite hard! Combine what you've learned in this lesson to answer the following:
+
+<br>
+<center>
+**"Find all the employees in the United States who work the most common full-time equivalent hours across the corporation."**
+</center>
+<br>
+
+Think of this as being two separate tasks combined:
+
+* Write a query to find the most common full-time equivalent hours across the corporation
+* Use this as a subquery in an outer query to find those employees in the United States who work those hours
+
+<details>
+<summary>**Hints**</summary>
+The first query corresponds to the **mode** in statistics: the most commonly occurring value in a set of values. Think of grouping the employees by `fte_hours`, counting the number of employees in each group, and then finding the `fte_hours` with the largest count. Can you extend your subquery to work for ties?
+</details>
+
+<details>
+<summary>**Solution**</summary>
+
+*Query for the mode*
+
+```{sql, connection = db, output.var="out"}
+SELECT fte_hours
+FROM employees
+GROUP BY fte_hours
+ORDER BY COUNT(*) DESC
+LIMIT 1
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+*Query for the mode - accounting for ties*
+
+In `PostgreSQL` when you use a subquery in the `FROM` clause, you **must** give it an alias, hence `AS temp` below.
+
+```{sql, connection = db, output.var="out"}
+SELECT fte_hours
+FROM employees
+GROUP BY fte_hours
+HAVING COUNT(*) = (
+  SELECT MAX(count)
+  FROM (
+    SELECT COUNT(*) AS count
+    FROM employees
+    GROUP BY fte_hours
+  ) AS temp
+)
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+*Use the mode query as a subquery in outer query*
+
+```{sql, connection = db, output.var="out"}
+SELECT *
+FROM employees
+WHERE country = 'United States' AND fte_hours IN (
+  SELECT fte_hours
+  FROM employees
+  GROUP BY fte_hours
+  HAVING COUNT(*) = (
+    SELECT MAX(count)
+    FROM (
+      SELECT COUNT(*) AS count
+      FROM employees
+      GROUP BY fte_hours
+    ) AS temp
+  )
+)
+```
+```{r, echo=FALSE, eval=TRUE}
+out
+```
+
+</details>
+</blockquote>
+<br>
+
+# Recaps
+
+## Order of definition
+
+| Order of definition | Keyword | Specifies | Required? |
+| --- | --- |--- | --- |
+| 1 | `SELECT` | Column to query | Yes |
+| 2 | `AS` | Column alias | No |
+| 3 | `FROM` | Table to query |  Yes |
+| 4 | `WHERE` | Row-level filter | No |
+| 5 | `GROUP BY` | Grouping for aggregates | No |
+| 6 | `HAVING` | Group-level filter | No |
+| 7 | `ORDER BY` | Sort order | No |
+| 8 | `LIMIT` | How many records to return | No |
+
+## Useful mnemonic for order of definition
+
+| Keyword | Mnemonic |
+| --- | --- |
+| `SELECT AS` | So |
+| `FROM` | Few |
+| `WHERE` | Workers
+| `GROUP BY` | Go
+| `HAVING` | Home
+| `ORDER BY` | On Time
+
+## Order of execution
+
+The order above applies for **writing** `SQL` queries, but it is also helpful to understand the **order of execution** of the parts of a `SQL` query. This can help explain why, for example, an alias that you declare in the `SELECT` part can't be used in `HAVING`, and so on...
+
+| Order of execution | Keyword |
+| --- | --- |
+| 1 | `FROM` |
+| 2 | `WHERE` |
+| 3 | `GROUP BY` |
+| 4 | `HAVING` |
+| 5 | `SELECT` |
+| 6 | `ORDER BY` |
+| 7 | `LIMIT` |
+
+
+
