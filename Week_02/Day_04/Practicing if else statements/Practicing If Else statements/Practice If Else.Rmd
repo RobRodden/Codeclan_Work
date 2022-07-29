@@ -1,0 +1,58 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+stock_price <- 50
+
+if (stock_price > 50){
+  do_what <- "Don't Buy"
+} else if (stock_price > 20){
+  do_what <- "Buy 1"
+} else {
+  do_what <- "Buy 2"
+}
+
+do_what
+```
+
+```{r}
+check_same <- function(x, y){
+  if(all(x == y)) { # test if all elements are equal and in the same order
+    output <- "Exactly the same"
+  } else {
+    if(all(sort(x) == sort(y))) { # test if values are equal but in different order
+      output <- "The same"
+    } else {
+      output <- "Different"
+    }
+  }
+  output
+}
+
+```
+
+
+
+```{r}
+#1 - same values, same order - expected output - "Exactly the same"
+v1 <- c(1, 2, 3)
+v2 <- c(1, 2, 3)
+
+check_same(v1, v2)
+
+#2 - same values, different order - expected output - "The same"
+v1 <- c(1, 2, 3)
+v2 <- c(3, 2, 1)
+
+check_same(v1, v2)
+
+#3 - different values, regardless of order - expected output - "Different"
+v1 <- c(1, 2, 3)
+v2 <- c(1, 2, 4)
+
+check_same(v1, v2)
+
+```
+```

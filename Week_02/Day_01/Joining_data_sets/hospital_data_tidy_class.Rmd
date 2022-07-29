@@ -1,0 +1,42 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(CodeClanData)
+```
+
+```{r}
+hospital_visits
+view(hospital_visits)
+```
+
+```{r}
+hospital_visits %>% 
+  pivot_longer(cols = starts_with("FY"),
+               names_to = "year",
+               values_to = "visit_number"
+  )
+
+hospital_visits_long <- hospital_visits %>% 
+  pivot_longer(cols = starts_with("FY"),
+               names_to = "year",
+               values_to = "visit_number",
+               names_prefix = "FY")
+
+```
+
+```{r}
+tidy_hospital <- hospital_visits_long %>% 
+  pivot_wider(names_from = Field,
+              values_from = visit_number) %>% 
+
+separate(IcdChapter, c("code", 'description'), sep = "\\.")
+```
+
+```{r}
+tidy_hospital %>% 
+  unite(disease, c("code", "description"), sep = ":")
+```
+

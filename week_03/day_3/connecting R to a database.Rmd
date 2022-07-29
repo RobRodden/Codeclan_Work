@@ -1,0 +1,31 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Connecting R to a Database
+
+- connect R to a postgres database (omni pool)
+
+## Don't put login credintials on github (or any public place)
+
+- be careful with how we work with out login details
+
+-- host name
+-- username
+-- database
+-- port
+-- password
+
+2 main strategies
+
+ - gitignore
+ -store outside of a git repo
+ 
+ Load in our secret login credential into R
+ 
+```{r}
+source("secrets.R")
+```
+ 
+ 

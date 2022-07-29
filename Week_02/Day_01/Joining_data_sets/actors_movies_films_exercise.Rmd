@@ -1,0 +1,70 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+actors <- read_csv("actors.csv")
+moveis <- read_csv("movies.csv")
+movies <- read_csv("movies.csv")
+roles <- read_csv("roles.csv")
+```
+
+```{r}
+view(actors)
+view(movies)
+view(roles)
+
+actors
+movies
+roles
+```
+
+```{r}
+movies %>% 
+filter(name == "Little Mermaid, The")
+  
+filter(movies, name == "Little Mermaid, The")
+```
+
+```{r}
+little_mermaid_roles <- filter(roles, movie_id == 192017)
+little_mermaid_roles
+```
+
+```{r}
+little_mermaid_roles
+left_join(little_mermaid_roles, actors, by = c("actor_id" = "id"))
+```
+
+```{r}
+inner_join(little_mermaid_roles, actors, by = c("actor_id" = "id"))
+```
+
+```{r}
+actors_more_than_once <- filter(actors, film_count >= 2)
+actors_more_than_once
+
+actors %>% 
+  filter(film_count >= 2)
+
+left_join(actors_more_than_once, roles, by = c("id" = "actor_id")) %>%
+  arrange(desc(film_count))
+
+actors_more_than_once %>% 
+  left_join(roles, by = c("id" = "actor_id")) %>% 
+  left_join(movies, by = c("movie_id" = "id")) %>% 
+  arrange(desc(film_count))
+
+actors_more_than_once %>% 
+  left_join(roles, by = c("id" = "actor_id")) %>% 
+  left_join(movies, by = c("movie_id" = "id")) %>% 
+  mutate(rank = as.numeric(rank)) %>% 
+  group_by(first_name, last_name) %>% 
+  summarise(avg_rank = mean(rank, na.rm = T)) %>% 
+  ungroup() %>% 
+  slice_max(avg_rank, n = 5)
+  
+```
+

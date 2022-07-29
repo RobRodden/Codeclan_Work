@@ -1,0 +1,113 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+# error 1
+# original error
+some_letters <- ("E", "R", "R", "O", "R)
+
+# fixed version
+some_letters <- c("E", "R", "R", "O", "R")
+```
+
+```{r}
+# error 2
+# original error
+message <- c("does", "this" "work", "?")
+
+toupper(messege)
+
+# fixed version
+message <- c("does", "this", "work", "?")
+
+toupper(message)
+```
+
+```{r}
+# error 3
+# original error
+mtcars %>% 
+  select(mpg, cyl, disp) %>>%
+  filter(mpg < 20)
+
+# fixed version
+library(tidyverse)
+mtcars %>% 
+  select(mpg, cyl, disp) %>% 
+  filter(mpg < 20)
+```
+
+```{r}
+# error 3
+# original error
+iris %>% 
+  select(Sepal.Width, Species) %>% 
+  arrange(Sepal.Length)
+
+# fixed version
+library(tidyverse)
+iris %>% 
+  select(Sepal.Width, Sepal.Length, Species) %>% 
+  arrange(Sepal.Length)
+```
+
+```{r}
+# error 5
+# original error
+ToothGrowth %>%
+  summarise(avg_len_vc = mean(len)) %>% 
+  filter(supp == "VC")
+
+# fixed version
+ToothGrowth %>%
+  filter(supp == "VC") %>% 
+  summarise(avg_len_vc = mean(len))
+  
+```
+
+```{r}
+# error 6
+# original error
+animals <- c("cat", dog, "rabbit", "horse")
+sample(animals, 10)
+
+# fixed version
+animals <- c("cat", "dog", "rabbit", "horse")
+sample(animals, 2)
+
+or
+animals2 <- c("cat", "dog", "rabbit", "horse", "llama", "elephant", "mouse", "cat", "buffalo", "duck", "bird")
+sample(animals2, 10)
+
+or
+animals <- c("cat", "dog", "rabbit", "horse")
+sample(animals, 10, replace = T)
+```
+
+```{r}
+# error 7
+# original error
+dog_names <- c("Lucy", "Molly", "Charlie", "Luna", "Bella", "Cooper")
+
+cat_names < c("Luna", "Lily", "Lucy", "Charlie", "Max", "Oliver")
+
+Intersect(dog_names)
+
+# fixed version
+library(tidyverse)
+library(dplyr)
+dog_names <- c("Lucy", "Molly", "Charlie", "Luna", "Bella", "Cooper")
+
+cat_names <- c("Luna", "Lily", "Lucy", "Charlie", "Max", "Oliver")
+
+intersect(dog_names, cat_names)
+```
+
+?drop_na()
+```{r}
+tibble(alphabet = LETTERS,
+       numbers = 1:26) %>%
+  filter(!alphabet %>%  c("A", "B", "C"))
+```

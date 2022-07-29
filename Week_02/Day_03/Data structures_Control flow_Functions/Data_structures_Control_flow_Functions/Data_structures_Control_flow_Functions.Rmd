@@ -1,0 +1,738 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+x <- list(1, "a", TRUE, c(1, 2, 3))
+
+v <- 1:5
+
+as.list(v) # turns v into a list
+```
+
+```{r}
+x[[2]]
+```
+
+```{r}
+x[2]
+```
+
+```{r}
+str(x)
+```
+
+```{r}
+named_list <- list(a = "I love R", b = 1:10)
+
+named_list
+```
+
+```{r}
+str(named_list)
+```
+
+```{r}
+named_list$a
+named_list$b
+```
+
+```{r}
+cc_info
+cc_info[[1]]
+cc_info[1]
+cc_info[["tweet_id"]]
+cc_info["tweet_id"]
+```
+
+```{r}
+### Nested list
+student_info <- list(
+                "Agnes" = list(height = 1.8, shoe_size = 8L),
+                "Bobby" = list(height = 2.1, gender = "Male"),
+                "Charlie" = list(gender = "Female", likes_beets = TRUE)
+)
+
+student_info
+
+student_info$Agnes$height # use this if you are sure which colunm you  - and it won't change
+student_info[["agnes"]][["height"]] #  use this if you want to acces prgramatically allso becuase it's safer
+
+n <- "agnes"
+student_info
+student_info$n$height
+student_info[[n]][["height"]]
+```
+
+```{r}
+my_named_list <- c(a = 1, b = 2, c = "three", d = 4, e = "five")
+
+my_named_list[[2]]
+```
+
+```{r}
+my_named_list2 <- list(a = 1, b = 2, c = "three", d = 4, e = "five")
+
+my_named_list2[[2]]
+```
+
+```{r}
+my_named_list2[2]
+```
+
+```{r}
+class(my_named_list2[["b"]])
+```
+
+```{r}
+head(select(cc_info)) # this will select the column name
+```
+
+```{r}
+### matrixes 
+
+matrix(1:4)
+```
+
+```{r}
+matrix(1:4, nrow = 2)
+```
+
+```{r}
+matrix(1:12, ncol = 3)
+```
+
+```{r}
+m <- matrix(1:12, ncol = 3)
+y <- matrix(1:12, ncol = 3, byrow = TRUE)
+
+class(m)
+typeof(m)
+```
+
+```{r}
+m <- matrix(1:12, ncol = 3)
+y <- matrix(1:12, ncol = 3, byrow = TRUE)
+
+class(m)
+typeof(m)
+```
+
+```{r}
+### indexing a matrix
+
+cc_info_subset[row_nums, col_ids]
+```
+
+```{r}
+m[1, ]
+```
+
+```{r}
+m[, 1]
+```
+
+```{r}
+class(m[, 1])
+```
+
+```{r}
+m
+m[2:3, 2]
+```
+
+```{r}
+m[2:3, ]
+```
+
+```{r}
+m[c(1,3), c(1, 3) ]
+```
+
+```{r}
+m[c(1,3), -2 ]
+```
+
+```{r}
+m
+v <- 10:15
+
+v*2
+```
+
+```{r}
+v[-2]
+```
+
+```{r}
+m
+rowSums(m)
+```
+
+```{r}
+colSums(m)
+```
+
+```{r}
+rowMeans(m)
+```
+
+```{r}
+colMeans(m)
+```
+
+```{r}
+?matrix
+```
+
+```{r}
+my_matrix <- matrix(1:3, nrow = 3, ncol = 4)
+my_matrix2 <- matrix(c(1,2,3,1,2,3,1,2,3), 3)
+
+v <- c(1,2,3,1,2,3,1,2,3)
+matrix(v, nrow = 3)
+
+rep(1:3, each = 3)
+```
+
+```{r}
+my_matrix
+```
+
+```{r}
+my_matrix[2,3]
+```
+
+```{r}
+colSums(my_matrix)
+```
+
+```{r}
+colnames(m) <- paste0("col_", 1:3)
+rownames(m) <- paste0("row_", 1:4)
+m
+```
+
+```{r}
+paste0("row_1", 1:4)
+paste("row_", 1:4, 3)
+```
+
+```{r}
+# matrix: 2d struction (like a dataframe)
+# list: non-atomic data structe - can contain several values, and data types
+```
+
+```{r}
+list()
+matrix()
+```
+
+```{r}
+# basic manipulation
+# [[]]
+# []
+# for lists: $ remember df is a list
+
+
+### Control flow
+
+# know condition statements
+# nest condition statemsts
+# how to use for loops
+```
+
+```{r}
+### if statements
+
+if (this_thing_is_true) { # then
+  # do this thing
+}
+
+if (weather = "sunny"){
+  hang_up_washing()
+}
+```
+
+```{r}
+x <- 10
+
+if(x < 15) {# then
+  print("yes")}
+```
+
+```{r}
+x <- 10
+y <- 15
+
+if(x < y) {# then
+  print("yes")}
+```
+
+```{r}
+x <- 10
+y <- 5:20
+
+if(x < y) {# then
+  print("yes")} # can't compute as it's both true and false
+```
+
+```{r}
+x <- 10
+y <- 5:20
+
+if(x %in% y) {# then
+  print("yes")}
+```
+
+```{r}
+x <- 2
+
+if(x %% 2 == 0){print("yes, that divides by 2")}
+```
+
+```{r}
+x <- 3
+
+if(x %% 2 == 0){print("yes, that divides by 2")} else {print("no")}
+```
+
+```{r}
+x <- 100
+y <- 20
+
+if(x <y) {# then
+  print("yes")} else {print("no")}
+```
+
+```{r}
+x <- 11
+y <- 10:15
+
+if(x %in% y) {# then
+  print("yes")} else {print("no")}
+```
+
+```{r}
+x <- 3
+y <- 10
+
+if (x %in% c(3, 4, 5)){
+  
+  print("x is in our vector aka list")
+  
+  if (x == 5){
+    
+    print("x is exactly 5")
+    
+  }
+  
+} else {
+  
+  print("Start of else statement")
+  
+  if (y %% x == 0){
+    
+    print("x divides y")
+  
+  } else{
+    
+    print("x does not divide Y")
+  }
+  
+  print ("End of else statement")
+  
+}
+```
+
+### Loops
+"for"
+- used when we do know hoamy iterations we need
+- will end after the desired number of loops
+
+"while"
+- used when we don't know how many iterations we need
+- will end when a condition is met
+
+bear in mind:
+loops are useful but we usually can avoid
+
+For loops might be slow but probably because of a failure to vectorise
+```{r}
+for stuff
+  for other stuff
+
+v <- 10:20
+
+v * 2
+```
+
+```{r}
+for (item in list) {
+  print(item)
+}
+
+v <- 10:20
+for (item in v) {
+  print(item *2)
+}
+```
+
+```{r}
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+
+for (day in weekdays) {
+  phrase <- paste("the day is", day)
+  print(phrase)
+}
+  
+```
+
+```{r}
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+
+for (day in weekdays) {
+  browser()
+  phrase <- paste("the day is", day)
+  print(phrase)
+}
+```
+
+```{r}
+for (day in weekdays){
+  print(paste("the day is"), day))
+}
+```
+
+### while()
+```{r}
+current_value <- 1
+stop_value <- 10
+
+while (current_value < stop_value){
+  current_value <- current_value + 1
+  print(current_value)
+}
+```
+
+```{r}
+
+```
+
+### alternative ways to inder for a loop
+
+```{r}
+weekdays
+len_weekdays <- length(weekdays)
+
+for (d in weekdays){
+  phrase <- paste("the day is", day)
+  print(phrase)
+}
+for (i in 1:len_weekdays){
+  phrase <- paste("the day is", weekdays[i])
+  print(phrase)
+}
+```
+
+
+### build a vector from a loop
+```{r}
+
+weekdays <- c("Monday", "Tuesday", "Wednes", "T", "F")
+len_weekdays <- length(weekdays)
+
+for (i in 1:len_weekdays){
+    plural <- paste0(weekdays[i],"s")
+weekdays[i] <- plural
+}
+
+weekdays
+```
+
+```{r}
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+
+weekdays
+paste0(weekdays, "s")
+```
+
+### nested loops\
+```{r}
+m <- matrix(1:12, 4)
+nrows <- nrow(m)
+ncols <- ncol(m)
+
+for (row_i in 1:nrows){
+  print(m[row_i, ])
+}
+```
+```{r}
+for (row_i in 1:nrows) {
+  for(col_i in 1:ncols){
+    print(m[row_i, col_i])
+  }
+}
+```
+
+```{r}
+m <- matrix(rnorm(25), 5)
+num_row <- dim(m)[1]
+num_col <- dim(m)[2]
+
+for(row_index in 1:num_row){
+  for(col_index in 1:num_col){}
+}
+
+m
+```
+
+```{r}
+product_matrix <- matrix(NA, nrow = 5, ncol = 5)
+
+for (in in 1:nrow(product_matrix)){
+  for(j in 1:ncol(product_matrix))
+    #print(i * j)
+  product_matrix[i, j] <- i * j
+}
+
+example_matrix = matrix(1:25, nrow = 5, ncol = 5)
+example_matrix
+
+for (row_index in 1:5){
+  for(col_index in 1:5){
+    if(row_index == col_index){
+      print(example_matrix[row_index, col_index])
+    }
+  }
+}
+  
+# my failed attempt
+#num_row <- dim(m)[1]
+#num_col <- dim(m)[2]
+
+#for(row_index in 1:num_row*num_col){
+#  for(col_index in 1:num_col*num_row){}
+#}
+#for (row_i in 1:)
+```
+
+```{r}
+example_matrix = matrix(1:25, nrow = 5, ncol = 5)
+example_matrix 
+
+for (row_index in 1:5){
+  for (col_index in 1:5){
+    if (row_index == col_index){
+      print(example_matrix[row_index, col_index])
+    }
+   }
+}
+```
+
+```{r}
+paste0("Today is ", weekdays)
+```
+
+```{r}
+my_vector <- c(1, 4, 6, 2, 4)
+temp_vector <- numeric(length(my_vector))
+
+for (index in 1:length(my_vector)){
+  temp_vector[index] <- my_vector[index] + 1
+}
+```
+
+### Functions
+
+- be able to write your own functions
+- know best practice for writing R functions
+
+R is mostly a functional programming language
+OOP object oriented programming langauge
+- function is an isolated block of code that accepts an input and returns and output
+```{r}
+"nchar"
+
+"nchar(x, type = "chars", allowNA = FALSE, keepNA = NA)"
+
+x 
+
+nchar("hello", "chars", TRUE, NA)
+nchar("chars", TRUE, , "hello", NA)
+nchar("chars", TRUE, x = "hello", NA)
+
+
+data %>% 
+  select(.data = .)
+```
+
+parameter is same as argument
+```{r}
+nchar("hello", TRUE)
+
+```
+
+```{r}
+paste("a", "b", "c", "d", sep = "--") #overwitten the default sep
+```
+
+```{r}
+function_name <- function(par_1, par_2 = NULL, par_3 = default value){
+  stuff to do
+  
+  the last thing thats done will be the return value
+  return(value)
+}
+```
+
+```{r}
+multiply_by_5 <- function(x){
+  x * 5
+}
+multiply_by_5(2)
+```
+
+```{r}
+multiply_by <- function(x, y){
+  x * y
+}
+multiply_by(2, 10)
+```
+
+```{r}
+multiply_by <- function(x, y = 3){
+  z <- x * y
+  z
+}
+multiply_by(x = 2)
+```
+
+```{r}
+make_price <- function(x){
+  paste0("£", x)
+}
+  
+
+make_price(10)
+```
+
+```{r}
+$$
+  
+$$
+```
+
+### scope
+
+- what can a function see
+```{r}
+n <- 8
+multiply_by_n <- function(x){
+  x * n
+}
+
+multiply_by_n(2)
+```
+
+```{r}
+# don't use any variabel that are not declared locally
+n <- 8
+multiply_by_n <- function(x, n){
+  x * n
+}
+
+multiply_by_n(2)
+```
+
+```{r}
+n <- 8
+multiply_by_n <- function(x, n){
+  x * n
+}
+
+multiply_by_n(2, 9)
+```
+
+```{r}
+
+n <- 8
+multiply_by_n <- function(x, n){
+  ans <- x * n
+  if(ans %% 2 == 1){
+    print(paste("x is odd"))
+  }
+  print(paste("x is even"))
+}
+
+multiply_by_n(3, 3)
+```
+
+```{r}
+
+n <- 8
+multiply_by_n <- function(x, n){
+  ans <- x * n
+  if(ans %% 2 == 1){
+    return(paste("x is odd"))
+  }
+  print(paste("x is even"))
+}
+
+multiply_by_n(3, 3)
+```
+
+
+```{r}
+
+n <- 8
+multiply_by_n <- function(x, n){
+  ans <- x * n
+  if(ans %% 2 == 1){
+    z <- (paste("x is odd"))
+  } else{
+    z <- (paste("x is even"))
+  }
+  z
+}
+
+multiply_by_n(3, 3)
+```
+
+
+### best practice for writing functions
+
+good
+name with verbs if you can
+add_3()
+format_number
+read_data
+
+bad
+adder()
+number_formatter()
+data_reader()
+
+```{r}
+multiply_by_n()
+```
+
+DRY principal
+don't repeat yourself
+
+### debugging
+```{r}
+tri_nos <- function(n){
+  n_plus1 <- n + 1
+  numerator <- n * n_plus1
+  denominator <- 2
+  
+  t <- numerator / denominator
+  
+  list(total = t, n = n)
+}
+debugonce(tri_nos)
+
+tri_nos(4)
+```

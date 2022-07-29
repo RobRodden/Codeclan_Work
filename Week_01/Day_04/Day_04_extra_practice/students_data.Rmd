@@ -1,0 +1,27 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(CodeClanData)
+
+Students_data <- CodeClanData::students
+
+view(Students_data)
+view(students)
+skim(students)
+
+library(tidyverse)
+students %>% 
+  na.omit() %>%
+  select(
+    height_cm,
+    sleep_hours_schoolnight,
+    superpower,
+    languages_spoken,
+    planned_education_level
+  )
+```
+

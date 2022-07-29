@@ -1,0 +1,299 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+# Data Types 
+# file:///Users/robrodden/Documents/Codeclan/dr16_classnotes/week_01/day_1/3_flipped_data_types/data_types.html#2_Data_types_in_R:_the_basics
+
+```
+
+```{r}
+# Reading in data / writing data to destination
+# file:///Users/robrodden/Documents/Codeclan/dr16_classnotes/week_01/day_2/1_reading_in_data/reading_in_data.html
+
+library(tidyverse)
+read_csv("data/dog_bites.csv")
+dog_bites <- read_csv("data/dog_bites.csv")
+install.packages("readxl")
+library(readxl)
+seedmix <- read_excel("data/edinburgh_seedmix.xlsx")
+seedmix_north <- read_excel("data/edinburgh_seedmix.xlsx", sheet = 3
+seedmix_north <- read_excel("data/edinburgh_seedmix.xlsx", sheet = "North Neighbourhood")
+seedmix_south <- read_excel("data/edinburgh_seedmix.xlsx", sheet = 4)
+seedmix_south <- read_excel("data/edinburgh_seedmix.xlsx", sheet = "South Neighbourhood")
+library(CodeClanData) # then you can load data from this bundle eg students
+write_csv(students, "students.csv")
+write_csv(students, "clean_data/students.csv")
+#alternative file types
+bands <- read_tsv("data/indie_bands.txt") 
+beer <- read_delim("data/beer.txt", delim = ";")
+max_temp <- read_table("data/maxtemp.txt") # fixed width files
+# read files over the internet
+wksst <- read_table("https://www.cpc.ncep.noaa.gov/data/indices/wksst8110.for",
+  skip = 4,
+  col_names = c(
+    "week",
+    "Nino12",
+    "Nino3",
+    "Nino34",
+    "Nino4"
+  )
+)
+
+# Reading in multiple sheets
+## Method 1 (no loops) - lappy & naming the sheets the names of the tabs.
+name_sheets<-excel_sheets("data/edinburgh_seedmix.xlsx")
+num_sheets<-length(name_sheets)
+
+all_tabs <- lapply(name_sheets, function(x) read_excel("data/edinburgh_seedmix.xlsx", sheet = x))
+names(all_tabs)<-name_sheets
+#list2env(all_tabs, globalenv()) #may not be necessary to do this step - may want to just call each element of the list
+
+## Method 2  - start with a list and loop through assigning elements of the list
+all_tabs <- list()
+name_sheets<-excel_sheets("data/edinburgh_seedmix.xlsx")
+
+for(sheet in name_sheets) {
+  all_tabs[[sheet]] <- data.frame(read_excel("data/edinburgh_seedmix.xlsx", 
+                                                    sheet = sheet))
+}
+## Method 3 - loops & naming the sheets 'data_sheet_1' etc.
+num_sheets<-length(excel_sheets("data/edinburgh_seedmix.xlsx"))
+
+for(i in 1:num_sheets) {
+  assign(paste0("data_sheet_",i), data.frame(read_excel("data/edinburgh_seedmix.xlsx", 
+                                                sheet = i)))
+}
+## Method 4 - loops & naming the sheets the names of the tabs.
+name_sheets<-excel_sheets("data/edinburgh_seedmix.xlsx")
+num_sheets<-length(name_sheets)
+
+for(i in 1:num_sheets) {
+  assign(name_sheets[i], data.frame(read_excel("data/edinburgh_seedmix.xlsx", 
+                                                        sheet = i)))
+}
+
+```
+
+```{r}
+# The dplyr package
+## file:///Users/robrodden/Documents/Codeclan/dr16_classnotes/week_01/day_2/2_dplyr/dplyr.html#10_Pipes:_creating_sequences_of_multiple_operations
+
+install.packages("tidyverse")
+install.packages('devtools')
+devtools::install_github('codeclan/CodeClanData')
+library(CodeClanData)
+
+### checking data
+# number of rows
+nrow(all_deaths) # this brings back info on the number of rows in your dataset.
+ncol(all_deaths) # # this brings back info on the number of columns in your dataset.
+dim(all_deaths)
+names(all_deaths)
+head(all_deaths)
+head(all_deaths, 10)
+tail(all_deaths, 10)
+glimpse(all_deaths)
+view(all_deaths)
+str(all_deaths)
+all_deaths
+# bonus
+library(skimr) # this loads (not install) a package into RStudio
+skim(all_deaths)
+
+# Wrangling with dplyr
+## The select() function : choosing which variables to keep
+select(all_deaths, name, allegiances, gender, nobility, year_of_death)
+select(all_deaths, -name)
+deaths_no_names <- select(all_deaths, -name)
+select(all_deaths, -name, -allegiances, -year_of_death, -gender, -nobility)
+select(all_deaths, book1_GoT:book5_DwD)
+select(all_deaths, starts_with("book"))
+select(all_deaths, contains("book"))
+select(all_deaths, year_of_death, book_of_death)
+
+## The filter() function: subsetting your data
+filter(all_deaths, allegiances == "Lannister")
+filter(all_deaths, allegiances != "Lannister")
+filter(all_deaths, allegiances %in% c("House Lannister", "Lannister"))
+filter(all_deaths, year_of_death > 299)
+filter(all_deaths, year_of_death >= 299)
+filter(all_deaths, gender == 0)
+filter(all_deaths, allegiances == "None")
+filter(all_deaths, allegiances == "Lannister" & nobility == 1)
+filter(all_deaths, allegiances == "Lannister" | allegiances == "House Stark")
+filter(all_deaths, book_intro_chapter >= 5 & book_intro_chapter <= 10)
+filter(all_deaths, year_of_death <= 299)
+filter(all_deaths, gender == 0 & allegiances != "Lannister")
+filter(all_deaths, name == "Jon Snow" | name == "Daenerys Targaryen" | name == "Samwell Tarly")
+filter(all_deaths, name %in% c("Jon Snow", "Daenerys Targaryen", "Samwell Tarly"))
+
+## The arrange() function: putting your data in order
+arrange(all_deaths, gender) #default is ascending order
+arrange(all_deaths, desc(book_of_death))
+arrange(all_deaths, book_of_death, death_chapter)
+arrange(all_deaths, allegiances)
+arrange(all_deaths, allegiances, book_intro_chapter)
+arrange(all_deaths, desc(year_of_death))
+
+## The mutate() function: creating new variables (columns)
+mutate(all_deaths, years_survived = year_of_death - 298, .after = year_of_death)
+mutate(all_deaths, book_of_death_test = book_of_death * 5, .after = book_of_death)
+mutate(all_deaths, year_of_death = is.na(year_of_death))
+mutate(all_deaths, book_of_death = is.character(book_of_death))
+mutate(all_deaths, name = as.numeric(name))
+mutate(all_deaths, year_of_death = sum(year_of_death, na.rm = T))
+mutate(all_deaths, year_of_death = mean(year_of_death, na.rm = T))
+mutate(all_deaths, has_no_intro_chapter = is.na(book_intro_chapter))
+mutate(all_deaths, nobility = as.logical(nobility))
+mutate(all_deaths, n_males = sum(gender))
+mutate(all_deaths, book_intro_chapter_amended = is.na(book_intro_chapter), .after = book_intro_chapter)
+mutate(all_deaths, nobility = !is.logical(nobility))
+mutate(all_deaths, n_males = sum(gender, na.rm = T), .after = gender)
+
+## The summarise() function: summarise your table
+summarise(all_deaths, n_males = sum(gender))
+deaths_grouped <- group_by(all_deaths, allegiances)
+summarise(deaths_grouped, character_count = n())
+
+deaths_grouped2 <- group_by(all_deaths, nobility, gender)
+summarise(deaths_grouped2, character_count = n())
+
+have_died <- filter(all_deaths, !is.na(book_of_death))
+died_grouped <- group_by(have_died, allegiances)
+died_counts <- summarise(died_grouped, count = n())
+arrange(died_counts, desc(count))
+
+# Pipes: creating sequences of multiple operations.
+all_deaths %>% 
+  filter(!is.na(book_of_death)) %>% 
+  group_by(allegiances) %>% 
+  summarise(
+    count = n()
+  ) %>% 
+  arrange(desc(count))
+
+# Pull
+average_year_of_death <- all_deaths %>%
+  summarise(average_value = mean(year_of_death, na.rm = TRUE))
+
+cc_details_joined_to_customer_details %>% 
+  summarise(across(.fns = ~ sum(is.na(.x))))
+
+average_year_of_death
+
+all_deaths %>%
+  mutate(death_later_than_average = year_of_death > average_year_of_death)
+
+all_deaths %>%
+  mutate(death_later_than_average = year_of_death > 299)
+
+class(average_year_of_death)
+class(299)
+
+average_year_of_death <- all_deaths %>%
+  summarise(average_value = mean(year_of_death, na.rm = TRUE)) %>%
+  pull()
+
+average_year_of_death
+class(average_year_of_death)
+
+all_deaths %>% 
+  mutate(death_later_than_average = year_of_death > average_year_of_death, .after = year_of_death)
+
+# alternatively we can pull the value out using a $ eg
+all_deaths %>% 
+  mutate(death_later_than_average = year_of_death > average_year_of_death$average_value)
+
+# Dplyr Homework with answers
+# file:///Users/robrodden/Documents/Codeclan/dr16_classnotes/week_01/day_2/5_homework_dplyr/dplyr_homework_with_answers.html
+# let's check if there are any missing values
+drinks_content %>%
+  select(Beverage_category, Beverage, Beverage_prep, Calories) %>%
+  filter(is.na(Calories)) %>%
+  summarise(count_of_missing_calories = n())
+
+# create a new variable 
+drink_calories <- drinks_content %>%
+  mutate(calorie_diff = Calories - 135)
+
+most_calories <- drink_calories %>%
+  group_by(Beverage_category) %>%
+  summarise(mean_calories = mean(Calories)) %>%
+  arrange(desc(mean_calories)) %>%
+  head(3)
+
+most_calories
+
+least_calories <- drink_calories %>%
+  group_by(Beverage_category) %>%
+  summarise(mean_calories = mean(Calories)) %>%
+  arrange(mean_calories)%>%
+  head(3)
+
+least_calories
+
+# work out the mean calories for each beverage prep 
+average_bev_prep <- drink_calories %>%
+  group_by(Beverage_prep) %>%
+  summarise(mean_cals = mean(Calories)) %>%
+  arrange(desc(mean_cals))
+
+average_bev_prep
+
+# find the average calories - and we need to use pull() to be able to use the number in calculations
+avg_calories <- drink_calories %>%
+                  summarise(mean_calories = mean(Calories)) %>%
+                  pull()
+
+avg_calories
+
+# find which prep types have above average calories
+above_avg_calories <- average_bev_prep %>%
+  filter(mean_cals >= avg_calories)
+
+above_avg_calories
+
+# we also could have done it using mutate and then filter 
+
+average_bev_prep %>%
+  mutate(is_greater_than_avg = mean_cals >= avg_calories) %>%
+  filter(is_greater_than_avg == TRUE)
+
+head(drink_calories)
+
+drink_calories %>%
+  group_by(Beverage_category, Beverage, Beverage_prep) %>%
+  summarise(min_calories = min(Calories)) %>%
+  arrange(min_calories) %>%
+  head(1)
+
+```
+
+
+```{r}
+# help
+?select
+help(package = "dplyr")
+
+```
+
+
+
+```{r}
+```{r}
+# Q: What are the top 10 books with the highest average rating (with more than
+# 10,000 ratings)?
+
+top_10_books <- books %>%
+  select(title, average_rating, ratings_count) %>% 
+  filter(ratings_count >= 10000) %>% 
+  slice_max(average_rating, n = 10, with_ties = FALSE)
+
+top_10_books
+
+```
+```
+

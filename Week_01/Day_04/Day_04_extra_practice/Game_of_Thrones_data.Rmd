@@ -1,0 +1,144 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(skimr)
+
+nrow(all_deaths)
+ncol(all_deaths)
+dim(all_deaths)
+names(all_deaths)
+head(all_deaths)
+head(all_deaths, 10)
+tail(all_deaths, 10)
+glimpse(all_deaths)
+view(all_deaths)
+str(all_deaths)
+all_deaths
+
+skim(all_deaths)
+```
+
+
+```{r}
+select(all_deaths, name, allegiances, gender, nobility, year_of_death)
+select(all_deaths, -name)
+deaths_no_names <- select(all_deaths, -name)
+select(all_deaths, book1_GoT:book5_DwD)
+select(all_deaths, starts_with("book"))
+
+```
+
+```{r}
+filter(all_deaths, allegiances == "Lannister")
+filter(all_deaths, allegiances != "Lannister")
+filter(all_deaths, allegiances %in% c("House Lannister", "Lannister"))
+filter(all_deaths, year_of_death > 299)
+filter(all_deaths, year_of_death >= 299)
+filter(all_deaths, gender == 0)
+filter(all_deaths, allegiances == "None")
+filter(all_deaths, allegiances == "Lannister" & nobility == 1)
+filter(all_deaths, allegiances == "Lannister" | allegiances == "House Stark")
+filter(all_deaths, book_intro_chapter >= 5 & book_intro_chapter <= 10)
+filter(all_deaths, year_of_death <= 299)
+filter(all_deaths, gender == 0 & allegiances != "Lannister")
+filter(all_deaths, name == "Jon Snow" | name == "Daenerys Targaryen" | name == "Samwell Tarly")
+filter(all_deaths, name %in% c("Jon Snow", "Daenerys Targaryen", "Samwell Tarly"))
+
+```
+
+```{r}
+arrange(all_deaths, gender) #default is ascending order
+arrange(all_deaths, desc(book_of_death))
+arrange(all_deaths, book_of_death, death_chapter)
+
+arrange(all_deaths, allegiances)
+arrange(all_deaths, allegiances, book_intro_chapter)
+arrange(all_deaths, desc(year_of_death))
+```
+
+```{r}
+mutate(all_deaths, years_survived = year_of_death - 298, .after = year_of_death)
+mutate(all_deaths, book_of_death_test = book_of_death * 5, .after = book_of_death)
+mutate(all_deaths, year_of_death = is.na(year_of_death))
+mutate(all_deaths, book_of_death = is.character(book_of_death))
+mutate(all_deaths, name = as.numeric(name))
+mutate(all_deaths, year_of_death = sum(year_of_death, na.rm = T))
+mutate(all_deaths, year_of_death = mean(year_of_death, na.rm = T))
+mutate(all_deaths, book_intro_chapter_amended = is.na(book_intro_chapter), .after = book_intro_chapter)
+mutate(all_deaths, nobility = !is.logical(nobility))
+mutate(all_deaths, n_males = sum(gender, na.rm = T), .after = gender)
+```
+
+```{r}
+summarise(all_deaths, n_males = sum(gender))
+
+deaths_grouped <- group_by(all_deaths, allegiances)
+summarise(deaths_grouped, character_count = n())
+
+deaths_grouped2 <- group_by(all_deaths, gender, nobility)
+summarise(deaths_grouped2, character_count = n())
+```
+
+```{r}
+have_died <- filter(all_deaths, !is.na(book_of_death))
+died_grouped <- group_by(have_died, allegiances)
+died_counts <- summarise(died_grouped, count = n())
+arrange(died_counts, desc(count))
+
+```
+
+```{r}
+have_died <- filter(all_deaths, !is.na(book_of_death)) 
+
+died_grouped <- group_by(have_died, allegiances)
+died_counts <- summarise(died_grouped, count = n())
+
+arrange(died_counts, desc(count))
+```
+
+```{r}
+all_deaths %>% 
+  filter(!is.na(book_of_death)) %>% 
+  group_by(allegiances) %>% 
+  ?summarise(
+    count = n()
+  ) %>% 
+  arrange(desc(count))
+```
+
+```{r}
+average_year_of_death <- all_deaths %>% 
+  summarise(average_value = mean(year_of_death, na.rm = TRUE))
+
+average_year_of_death
+
+all_deaths %>% 
+  mutate(deaths_later_than_average = year_of_death > average_year_of_death)
+
+all_deaths %>% 
+  mutate(deaths_later_than_average = year_of_death > 299, .after = year_of_death)
+
+class(average_year_of_death)
+
+class(299)
+```
+
+```{r}
+average_year_of_death <- all_deaths %>%
+  summarise(average_value = mean(year_of_death, na.rm = TRUE)) %>%
+  pull()
+
+average_year_of_death
+class(average_year_of_death)
+
+all_deaths %>% 
+  mutate(death_later_than_average = year_of_death > average_year_of_death, .after = year_of_death)
+
+# alternatively we can pull the value out using a $ eg
+all_deaths %>% 
+  mutate(death_later_than_average = year_of_death > average_year_of_death$average_value)
+```
+

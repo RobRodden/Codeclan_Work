@@ -1,0 +1,267 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Unit testing in R
+## why test in R - reproducibility, consistancy
+
+# Leap year assignment
+```{r}
+is_leap_year <- function(year){
+  #add in condition for non numeric data
+  if (!is.numeric(year)) {
+    stop("Non-numeric input :(")
+  }
+    
+  if (year %% 100 == 0){
+      if (year %% 400 == 0){
+        return(TRUE)
+      } else {
+        return(FALSE)
+      }
+  }
+
+
+if (year %% 4 == 0){
+  return(TRUE){
+    else{
+      return(FALSE)
+    }
+  }
+}
+```
+
+```{r}
+is_leap_year <- function(year){
+  
+  #add in condition for non-numeric data
+  if (!is.numeric(year)) {
+    stop("Non-numeric input :(")
+  }
+  
+  if (year %% 100 == 0){
+    if (year %% 400 == 0){
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+  
+  if (year %% 4 == 0){
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+  
+}
+```
+
+
+```{r}
+is_leap_year <- function(year){
+  
+  if (year %% 100 == 0){
+    if (year %% 400 == 0){
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+  
+  if (year %% 4 == 0){
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+  
+}
+
+
+```
+
+## it's dividing by 100 and checking for a 
+
+```{r}
+library(testthat)
+
+```
+
+expect_equal(): checking that the objects give the answer we expect
+expect_error(): checking thtat code throws an error
+
+```{r}
+a <- 10
+```
+
+```{r}
+expect_equal(a, 10)
+```
+
+```{r}
+expect_equal(a, 11)
+```
+test_that()
+
+```{r}
+test_that("Real leap years return TRUE", {
+  expect_equal(is_leap_year(2020), TRUE)
+  expect_equal(is_leap_year(2000), TRUE)
+})
+```
+
+```{r}
+# second test : one expectation
+test_that("Character input returns an error", {
+  expect_error(is_leap_year("year"))
+})
+## Test passed 🎉
+```
+
+## the test na,e is "Character input returns an error"
+##it's looking to see if the text is contained in the code, when it sees that year isn't there it says - yes that is an error (ie it's not there) and says yes, it was a successful error
+
+```{r}
+test_that("Character input returns an error", {
+  expect_error(is_leap_year(2010))
+})
+```
+
+```{r}
+test_that("Non-numeric input returns an error", {
+  expect_error(is_leap_year("year"))
+  expect_error(is_leap_year(TRUE))
+})
+```
+
+```{r}
+test_that("check that 2017 and 1900 are not leap years",{
+  expect_equal(is_leap_year(2017), FALSE)
+  expect_equal(is_leap_year(1900), FALSE)
+})
+```
+
+# assertive programming
+```{r}
+library(tidyverse)
+weather_one <- read.csv("data/delhi_weather_one.csv")
+
+weather_one
+```
+
+```{r}
+weather_report <- function(weather){
+  # Our average temperature, humidity and wind speed 
+  weather_means <- 
+  weather %>% 
+  summarise(
+    mean_temp = mean(temp),
+    mean_humidity = mean(humidity),
+    mean_windspeed = mean(wind_speed)
+  )
+
+# Show hot and humid days
+hot_and_humid <- 
+weather %>% 
+  filter(temp > 20) %>% 
+  filter(humidity > 55)
+
+return(list(weather_means, hot_and_humid))
+}
+
+weather_report(delhi_weather_one)
+```
+
+```{r}
+weather_two <- read_csv("data/delhi_weather_two.csv")
+
+weather_report(weather_two)
+```
+
+```{r}
+install.packages("assertr")
+```
+
+# using assertr
+
+```{r}
+library(assertr)
+```
+
+```{r}
+weather_report <- function(weather){
+  
+  # put in the checks on the data first
+  weather %>% 
+    # humidiyt is a proportion
+    verify(humidity >= 0 & humidity <= 100)
+    #lowest ever temp in Delhi was -31, and hightes +51
+    verify(temp >= -35 & temp <= 55) %>% 
+    verify(wind_speed >= 0 & wind_speed <= 108)
+  
+  # Our average temperature, humidity and wind speed 
+  weather_means <- 
+  weather %>% 
+  summarise(
+    mean_temp = mean(temp),
+    mean_humidity = mean(humidity),
+    mean_windspeed = mean(wind_speed)
+  )
+
+# Show hot and humid days
+hot_and_humid <- 
+weather %>% 
+  filter(temp > 20) %>% 
+  filter(humidity > 55)
+
+return(list(weather_means, hot_and_humid))
+}
+
+weather_report(weather_two)
+view(weather_two)
+```
+
+## example with stopifnot for more general chunks
+
+```{r}
+weather_report <- function(weather){
+
+  stopifnot(
+    nrow(weather) > 15,
+    ncol(weather) == 4,
+    drop_na(weather) == weather
+  )  
+  # put in the checks on the data first
+  weather %>% 
+    # humidiyt is a proportion
+    verify(humidity >= 0 & humidity <= 100)
+    #lowest ever temp in Delhi was -31, and hightes +51
+    verify(temp >= -35 & temp <= 55) %>% 
+    verify(wind_speed >= 0 & wind_speed <= 108)
+  
+  # Our average temperature, humidity and wind speed 
+  weather_means <- 
+  weather %>% 
+  summarise(
+    mean_temp = mean(temp),
+    mean_humidity = mean(humidity),
+    mean_windspeed = mean(wind_speed)
+  )
+
+# Show hot and humid days
+hot_and_humid <- 
+weather %>% 
+  filter(temp > 20) %>% 
+  filter(humidity > 55)
+
+return(list(weather_means, hot_and_humid))
+}
+
+weather_report(weather_two)
+
+```
+
+```{r}
+
+```
+

@@ -1,0 +1,65 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# loading and cleaning data
+```{r}
+
+library(tidyverse)
+library(janitor)
+
+dietary_composition_by_country <- read_csv("data/dietary-composition-by-country.csv") %>% clean_names()
+view(dietary_composition_by_country)
+names(dietary_composition_by_country)
+glimpse(diet_comp_clean)
+
+diet_comp_clean <- pivot_longer(dietary_composition_by_country, c(animal_fats_fao_2017:wheat_fao_2017), 
+                                names_to = "kcal_source",
+                                                                           values_to = "avg_daily_kcals")
+
+view(diet_comp_clean)
+```
+
+# Q2
+```{r}
+# library(stringr)
+# pattern <- "^[a-z]+[a-zA-z]*"
+
+# here is where we remove supperflous data and 
+# pattern2 <- "_"
+pattern <- "^[a-z]+[:punct:]+[a-z]+"
+
+diet_comp_clean <- diet_comp_clean %>% 
+  mutate(kcal_source = str_extract_all(kcal_source, pattern)) %>% 
+  rename("country" = "entity")
+
+# better answers
+  mutate(kcal_source2 = str_replace_all(kcal_source, pattern, " "),
+         kcal_source3 = str_replace_all(kcal_source2, "_", "-")) %>%
+  mutate(kcal_source = ?str_sub(kcal_source, 1, nchar(kcal_source) - 13)) # extract and replace  
+
+# diet_comp_clean <- diet_comp_clean %>%
+  # mutate(kcal_source_new = str_replace_all(kcal_source, pattern2, " "))
+# here is where we summarise the missing data
+diet_comp_clean %>% 
+  summarise(across(.fns = ~ sum(is.na(.x))))
+
+view(diet_comp_clean) 
+
+missing_code_investigation <- diet_comp_clean %>% 
+  group_by(country, code) %>% 
+  filter(is.na(code))
+
+
+summarise(missing_code_investigation, character_count = n()) %>% 
+  arrange(country)
+
+# pattern <- "Cabo Verde"
+# pattern2 <- "United States of America"
+
+diet_comp_clean %>% 
+  str_detect("(?i)United States of America")
+
+```
+
